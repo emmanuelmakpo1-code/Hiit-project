@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mentee dashboard — TutorMeet</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+<link href="style.css" rel="stylesheet">
+</head>
+<body>
+
+<div id="navbar-mount"></div>
+
+<div class="dash-shell">
+  <div class="container">
+    <span class="section-label">Mentee dashboard</span>
+    <h2 class="mt-2 mb-4" id="welcome-heading">Welcome back</h2>
+
+    <div id="live-now-section" class="mb-4 d-none">
+      <div class="d-flex align-items-center gap-2 mb-2">
+        <span class="live-dot"></span>
+        <span class="section-label mb-0" style="color: var(--red);">Live now</span>
+      </div>
+      <div class="row g-3" id="live-now-list"></div>
+    </div>
+
+    <div class="row g-4">
+            <div class="col-lg-8">
+        <div class="d-flex flex-wrap gap-2 align-items-end mb-3">
+          <div class="flex-grow-1">
+            <label class="form-label small mb-1">Search mentors or subjects</label>
+            <input type="text" class="form-control" id="search-input" placeholder="e.g. Amara, Algorithms...">
+          </div>
+          <div>
+            <label class="form-label small mb-1">Course</label>
+            <select class="form-select" id="filter-subject"><option value="">All</option></select>
+          </div>
+          <div>
+            <label class="form-label small mb-1">Min CGPA</label>
+            <select class="form-select" id="filter-cgpa">
+              <option value="0">Any</option>
+              <option value="4">4.0+</option>
+              <option value="4.5">4.5+</option>
+              <option value="4.8">4.8+</option>
+            </select>
+          </div>
+          <div>
+            <label class="form-label small mb-1">Min rating</label>
+            <select class="form-select" id="filter-rating">
+              <option value="0">Any</option>
+              <option value="4">4.0+</option>
+              <option value="4.5">4.5+</option>
+              <option value="4.8">4.8+</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="row g-3" id="mentor-list"></div>
+      </div>
+
+            <div class="col-lg-4">
+        <span class="section-label d-block mb-2">Your upcoming sessions</span>
+        <div id="my-sessions"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal fade" id="bookModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content rounded-tm">
+      <div class="modal-header">
+        <h5 class="modal-title" id="book-modal-title">Book a session</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body" id="book-modal-body"></div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script src="script.js"></script>
+<script>
+const user = requireRole("mentee");
+document.getElementById("welcome-heading").textContent = `Welcome back, ${user.name.split(" ")[0]}`;
+
+function allMentors() { return getUsers().filter(u => u.role === "mentor"); }
+
+function populateSubjectFilter() {
+  const subjects = new Set();
+  allMentors().forEach(m => (m.subjects || []).forEach(s => subjects.add(s)));
+  const sel = document.getElementById("filter-subject");
+  [...subjects].sort().forEach(s => {
+    const opt = document.createElement("option"); opt.value = s; opt.textContent = s; sel.appendChild(opt);
+  });
+}
+
+function mentorCardHTML(m) {
+  return `
+  <div class="col-md-6">
+    <div class="credential-card d-flex flex-column">
+      <div class="d-flex align-items-center gap-3 mb-2">
+        <div class="avatar-ring">${initials(m.name)}</div>
+        <div>
+          <h5 class="mb-0">${m.name}</h5>
+          <span class="text-secondary small">${m.rating ? "⭐ " + m.rating + " · " + (m.sessionsHosted||0) + " sessions" : "New mentor"}</span>
+        </div>
+      </div>
+      <p class="small text-secondary flex-grow-1">${m.bio || "No bio yet."}</p>
+      <div class="stat-strip">
+        <span class="stat-chip">CGPA <strong>${m.cgpa || "—"}</strong></span>
+        <span class="stat-chip">Awards <strong>${(m.awards||[]).length}</strong></span>
+        <span class="stat-chip">Merits <strong>${(m.merits||[]).length}</strong></span>
+      </div>
+      <div class="d-flex flex-wrap gap-2 mb-3">
+        ${(m.subjects||[]).map(s => `<span class="badge-subject">${s}</span>`).join("")}
+      </div>
+      <button class="btn btn-mentee mt-auto" onclick="openBookModal('${m.id}')">View & book</button>
+      <button class="btn btn-outline-tm btn-sm mt-2" onclick="requestMentorship('${m.id}')">Request ongoing mentorship</button>
+    </div>
+  </div>`;
+}
+
+function requestMentorship(mentorId) {
+  const mentor = allMentors().find(x => x.id === mentorId);
+  const already = getRequests().some(r => r.mentorId === mentorId && r.menteeId === user.id && r.status === "pending");
+  if (already) { alert("You've already sent a request to " + mentor.name + " — sit tight while they review it."); return; }
+  sendMentorshipRequest(user, mentor, (mentor.subjects || [])[0] || "General mentorship", "Would love your guidance this semester.");
+  alert(`Request sent to ${mentor.name}. You'll be added to their roster once they accept.`);
+}
+
+function renderMentors() {
+  const q = document.getElementById("search-input").value.trim().toLowerCase();
+  const subj = document.getElementById("filter-subject").value;
+  const minCgpa = parseFloat(document.getElementById("filter-cgpa").value);
+  const minRating = parseFloat(document.getElementById("filter-rating").value);
+
+  const list = allMentors().filter(m => {
+    const matchesQ = !q || m.name.toLowerCase().includes(q) || (m.subjects||[]).some(s => s.toLowerCase().includes(q));
+    const matchesSubj = !subj || (m.subjects||[]).includes(subj);
+    const matchesCgpa = (m.cgpa || 0) >= minCgpa;
+    const matchesRating = (m.rating || 0) >= minRating;
+    return matchesQ && matchesSubj && matchesCgpa && matchesRating;
+  });
+
+  const wrap = document.getElementById("mentor-list");
+  wrap.innerHTML = list.length ? list.map(mentorCardHTML).join("") : `<p class="text-secondary">No mentors match those filters yet.</p>`;
+}
+
+["search-input","filter-subject","filter-cgpa","filter-rating"].forEach(id => {
+  document.getElementById(id).addEventListener("input", renderMentors);
+});
+
+function openBookModal(mentorId) {
+  const m = allMentors().find(x => x.id === mentorId);
+  const sessions = getSessions().filter(s => s.mentorId === mentorId);
+  document.getElementById("book-modal-title").textContent = `${m.name}'s sessions`;
+  document.getElementById("book-modal-body").innerHTML = sessions.length
+    ? sessions.map(s => `
+      <div class="session-row">
+        <div>
+          <strong>${s.title}</strong>
+          <div class="small text-secondary">${s.subject} · ${new Date(s.datetime).toLocaleString([], {dateStyle:'medium', timeStyle:'short'})}</div>
+          <span class="loc-pill ${s.locationType === 'online' ? 'online' : 'inperson'}">${s.locationType === 'online' ? 'Online' : s.locationDetail}</span>
+        </div>
+        <button class="btn btn-mentee btn-sm" onclick="bookSession('${s.id}')">${(s.attendees||[]).includes(user.id) ? "Booked ✓" : "Book"}</button>
+      </div>`).join("")
+    : `<p class="text-secondary mb-0">This mentor hasn't scheduled any sessions yet.</p>`;
+  new bootstrap.Modal(document.getElementById("bookModal")).show();
+}
+
+function bookSession(sessionId) {
+  const sessions = getSessions();
+  const s = sessions.find(x => x.id === sessionId);
+  if (!s.attendees.includes(user.id)) s.attendees.push(user.id);
+  saveSessions(sessions);
+  renderMySessions();
+  openBookModal(s.mentorId);
+}
+
+function renderMySessions() {
+  const mine = getSessions().filter(s => (s.attendees||[]).includes(user.id));
+  const wrap = document.getElementById("my-sessions");
+  wrap.innerHTML = mine.length ? mine.map(s => `
+    <div class="session-row">
+      <div>
+        <strong>${s.title}</strong>
+        <div class="small text-secondary">with ${s.mentorName}</div>
+        <div class="small text-secondary">${new Date(s.datetime).toLocaleString([], {dateStyle:'medium', timeStyle:'short'})}</div>
+        <span class="loc-pill ${s.locationType === 'online' ? 'online' : 'inperson'}">${s.locationType === 'online' ? 'Online' : s.locationDetail}</span>
+      </div>
+      <a class="btn btn-mentee btn-sm" href="room.html?session=${s.id}">Join</a>
+    </div>`).join("") : `<p class="text-secondary small">No sessions booked yet — browse mentors to find one.</p>`;
+}
+
+function renderLiveNow() {
+  const live = getLiveSessions();
+  const section = document.getElementById("live-now-section");
+  const list = document.getElementById("live-now-list");
+  section.classList.toggle("d-none", live.length === 0);
+  list.innerHTML = live.map(s => `
+    <div class="col-md-6">
+      <div class="live-card">
+        <span class="live-badge"><span class="dot-white"></span>LIVE</span>
+        <h5 class="mb-1" style="color:#fff;">${s.title}</h5>
+        <p class="small mb-2">${s.subject} · hosted by ${s.mentorName}</p>
+        <a class="btn btn-mentee btn-sm" href="room.html?session=${s.id}">Join lecture</a>
+      </div>
+    </div>`).join("");
+}
+
+populateSubjectFilter();
+renderMentors();
+renderMySessions();
+renderLiveNow();
+setInterval(renderLiveNow, 4000); // poll so a lecture that just went live shows up without a refresh
+renderNavbar("navbar-mount");
+</script>
+</body>
+</html>

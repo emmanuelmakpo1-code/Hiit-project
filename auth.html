@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Log in or sign up — TutorMeet</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+<link href="style.css" rel="stylesheet">
+</head>
+<body>
+
+<div id="navbar-mount"></div>
+
+<div class="auth-wrap">
+  <div class="auth-shell">
+    <div class="auth-side d-none d-lg-flex">
+      <div>
+        <span class="hero-eyebrow" style="background:rgba(255,255,255,.15); color:#fff;">Peer to peer, on your campus</span>
+        <h2 class="mt-3 mb-3" style="color:#fff;">One good mentor changes a whole semester.</h2>
+        <p style="color:rgba(255,255,255,.8);">Join as a fresh student looking for guidance, or a senior ready to mentor — either way you're two steps from your first session.</p>
+      </div>
+      <div class="auth-side-graphic">
+        <svg viewBox="0 0 220 120" xmlns="http://www.w3.org/2000/svg" style="width:100%; height:auto;">
+          <circle cx="40" cy="85" r="26" fill="rgba(255,255,255,.16)"/>
+          <circle cx="40" cy="85" r="16" fill="#ffffff" opacity=".9"/>
+          <circle cx="180" cy="35" r="26" fill="rgba(255,255,255,.16)"/>
+          <circle cx="180" cy="35" r="16" fill="#ffffff" opacity=".9"/>
+          <path d="M60 78 Q110 20 164 40" stroke="rgba(255,255,255,.6)" stroke-width="2" fill="none" stroke-dasharray="2 6" stroke-linecap="round"/>
+        </svg>
+      </div>
+    </div>
+
+    <div class="auth-card">
+      <div class="role-toggle mb-4">
+        <button id="tab-mentee" type="button">Fresh Student</button>
+        <button id="tab-mentor" type="button">Senior Student</button>
+      </div>
+
+      <ul class="nav nav-pills mb-4 justify-content-center" id="mode-pills">
+        <li class="nav-item"><button class="nav-link active" id="mode-login" type="button">Log in</button></li>
+        <li class="nav-item"><button class="nav-link" id="mode-signup" type="button">Create account</button></li>
+      </ul>
+
+      <form id="login-form" class="needs-validation" novalidate>
+      <div class="mb-3">
+        <label class="form-label">Email</label>
+        <input type="email" class="form-control" id="login-email" required>
+        <div class="invalid-feedback">Enter a valid email.</div>
+      </div>
+      <div class="mb-3">
+        <label class="form-label">Password</label>
+        <input type="password" class="form-control" id="login-password" required minlength="6">
+        <div class="invalid-feedback">Password must be at least 6 characters.</div>
+      </div>
+      <div id="login-error" class="text-danger small mb-2 d-none">No account matches those details for this role.</div>
+      <button type="submit" class="btn w-100" id="login-submit">Log in</button>
+      <p class="text-center text-secondary small mt-3 mb-0">Demo password for seeded mentors: <span class="mono">demo1234</span></p>
+    </form>
+
+        <form id="signup-form" class="needs-validation d-none" novalidate>
+      <div class="mb-3">
+        <label class="form-label">Full name</label>
+        <input type="text" class="form-control" id="signup-name" required>
+        <div class="invalid-feedback">Tell us your name.</div>
+      </div>
+      <div class="mb-3">
+        <label class="form-label">School email</label>
+        <input type="email" class="form-control" id="signup-email" required>
+        <div class="invalid-feedback">Enter a valid email.</div>
+      </div>
+      <div class="row">
+        <div class="col-6 mb-3">
+          <label class="form-label">Password</label>
+          <input type="password" class="form-control" id="signup-password" required minlength="6">
+          <div class="invalid-feedback">Min 6 characters.</div>
+        </div>
+        <div class="col-6 mb-3">
+          <label class="form-label">Confirm</label>
+          <input type="password" class="form-control" id="signup-confirm" required minlength="6">
+          <div class="invalid-feedback">Passwords must match.</div>
+        </div>
+      </div>
+
+      <div id="mentor-extra-fields" class="d-none">
+        <hr>
+        <p class="text-secondary small">Add a few starter credentials now — you can expand your full profile right after signup.</p>
+        <div class="mb-3">
+          <label class="form-label">Current CGPA</label>
+          <input type="number" step="0.01" min="0" max="5" class="form-control" id="signup-cgpa" placeholder="e.g. 4.50">
+        </div>
+        <div class="mb-3">
+          <label class="form-label">Subjects you can mentor in</label>
+          <input type="text" class="form-control" id="signup-subjects" placeholder="e.g. Calculus, Data Structures">
+        </div>
+      </div>
+
+      <div id="signup-error" class="text-danger small mb-2 d-none">That email is already registered.</div>
+      <button type="submit" class="btn w-100" id="signup-submit">Create account</button>
+    </form>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script src="script.js"></script>
+<script>
+renderNavbar("navbar-mount");
+
+let currentRole = "mentee";
+
+function paintRoleUI() {
+  document.getElementById("tab-mentee").classList.toggle("active", currentRole === "mentee");
+  document.getElementById("tab-mentor").classList.toggle("active", currentRole === "mentor");
+  document.getElementById("mentor-extra-fields").classList.toggle("d-none", currentRole !== "mentor");
+  const color = currentRole === "mentor" ? "btn-mentor" : "btn-mentee";
+  const other = currentRole === "mentor" ? "btn-mentee" : "btn-mentor";
+  ["login-submit","signup-submit"].forEach(id => {
+    const b = document.getElementById(id);
+    b.classList.remove(other); b.classList.add(color);
+  });
+}
+
+const qsRole = new URLSearchParams(window.location.search).get("role");
+if (qsRole === "mentor" || qsRole === "mentee") currentRole = qsRole;
+
+document.getElementById("tab-mentee").addEventListener("click", () => { currentRole = "mentee"; paintRoleUI(); });
+document.getElementById("tab-mentor").addEventListener("click", () => { currentRole = "mentor"; paintRoleUI(); });
+
+const loginForm = document.getElementById("login-form");
+const signupForm = document.getElementById("signup-form");
+document.getElementById("mode-login").addEventListener("click", (e) => {
+  e.target.classList.add("active"); document.getElementById("mode-signup").classList.remove("active");
+  loginForm.classList.remove("d-none"); signupForm.classList.add("d-none");
+});
+document.getElementById("mode-signup").addEventListener("click", (e) => {
+  e.target.classList.add("active"); document.getElementById("mode-login").classList.remove("active");
+  signupForm.classList.remove("d-none"); loginForm.classList.add("d-none");
+});
+
+paintRoleUI();
+
+function redirectForRole(user) {
+  window.location.href = user.role === "mentor" ? "mentor-dashboard.html" : "mentee-dashboard.html";
+}
+
+loginForm.addEventListener("submit", function (e) {
+  e.preventDefault(); e.stopPropagation();
+  document.getElementById("login-error").classList.add("d-none");
+  if (!loginForm.checkValidity()) { loginForm.classList.add("was-validated"); return; }
+  const email = document.getElementById("login-email").value.trim().toLowerCase();
+  const pw = document.getElementById("login-password").value;
+  const user = getUsers().find(u => u.email.toLowerCase() === email && u.password === pw && u.role === currentRole);
+  if (!user) { document.getElementById("login-error").classList.remove("d-none"); return; }
+  setCurrentUser(user);
+  redirectForRole(user);
+});
+
+signupForm.addEventListener("submit", function (e) {
+  e.preventDefault(); e.stopPropagation();
+  document.getElementById("signup-error").classList.add("d-none");
+
+  const pw = document.getElementById("signup-password").value;
+  const cf = document.getElementById("signup-confirm").value;
+  document.getElementById("signup-confirm").setCustomValidity(pw !== cf ? "mismatch" : "");
+
+  if (!signupForm.checkValidity()) { signupForm.classList.add("was-validated"); return; }
+
+  const email = document.getElementById("signup-email").value.trim().toLowerCase();
+  const users = getUsers();
+  if (users.some(u => u.email.toLowerCase() === email)) {
+    document.getElementById("signup-error").classList.remove("d-none");
+    return;
+  }
+
+  const newUser = {
+    id: "u_" + Date.now(),
+    role: currentRole,
+    name: document.getElementById("signup-name").value.trim(),
+    email,
+    password: pw
+  };
+
+  if (currentRole === "mentor") {
+    newUser.bio = "";
+    newUser.cgpa = parseFloat(document.getElementById("signup-cgpa").value) || null;
+    newUser.subjects = document.getElementById("signup-subjects").value.split(",").map(s => s.trim()).filter(Boolean);
+    newUser.awards = []; newUser.merits = []; newUser.certifications = [];
+    newUser.rating = null; newUser.sessionsHosted = 0;
+  }
+
+  users.push(newUser);
+  saveUsers(users);
+  setCurrentUser(newUser);
+
+  if (currentRole === "mentor") {
+    window.location.href = "mentor-profile.html?onboarding=1";
+  } else {
+    redirectForRole(newUser);
+  }
+});
+</script>
+</body>
+</html>
